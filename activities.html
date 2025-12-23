@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Log - 活動管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script src="firebase-config.js"></script>
+    <script src="csv-utils.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+<div id="app" class="max-w-4xl mx-auto p-4">
+    <header class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">🏃 Running Log</h1>
+        <div v-if="user">
+            <span>{{ user.displayName }}</span>
+            <button @click="logout" class="ml-2 text-sm text-red-500 underline">登出</button>
+        </div>
+        <button v-else @click="login" class="bg-blue-600 text-white px-4 py-2 rounded">Google 登入</button>
+    </header>
+
+    <div v-if="showBackupModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded shadow-lg max-w-sm w-full">
+            <h3 class="text-lg font-bold mb-2">📅 每月備份提醒</h3>
+            <p class="mb-4 text-gray-600">這是本月第一次登入，建議備份您的訓練資料。</p>
+            <div class="flex flex-col gap-2">
+                <button @click="exportData" class="bg-green-600 text-white py-2 rounded">下載備份 CSV</button>
+                <button @click="dismissBackup" class="text-gray-500 py-2">本月不再提醒</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="user" class="bg-white p-4 rounded shadow mb-6 flex gap-4">
+        <select v-model="filterMonth" class="border p-2 rounded">
+            <option value="">所有月份</option>
+            <option value="2025-12">2025-12</option>
+            <option value="2025-11">2025-11</option>
+            </select>
+        <select v-model="filterType" class="border p-2 rounded">
+            <option value="all">全部類型</option>
+            <option value="race">比賽</option>
+            <option value="training">訓練</option>
+        </select>
+    </div>
+
+    <div v-if="user" class="mb-6">
+        <label class="block mb-2 font-bold">匯入舊比賽記錄 (demo_rrlog.csv)</label>
+        <input type="file" @change="handleFileUpload" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+    </div>
+
+    <div v-if="user">
+        <div v-for="act in filteredActivities" :key="act.id" class="bg-white p-4 rounded shadow mb-4 border-l-4" :class="act.type === 'race' ? 'border-red-500' : 'border-blue-500'">
+            <div class="flex justify-between">
+                <div class="font-bold text-lg">
+                    {{ act.date }} 
+                    <span v-if="act.type === 'race'">🏆 {{ act.raceNameZh || act.raceName }}</span>
+                    <span v-else>🏃 {{ act.workoutTitle || '訓練' }}</span>
+                </div>
+                <div class="text-gray-500">{{ act.distanceKm }} km</div>
+            </div>
+            <div class="text-sm text-gray-600 mt-1">
+                時間: {{ act.officialTimeStr || formatDuration(act.durationSec) }} | 
+                地點: {{ act.locationName }}
+            </div>
+            <div v-if="act.note" class="text-sm text-gray-400 mt-2 bg-gray-50 p-2 rounded">
+                📝 {{ act.note }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const user = ref(null);
+            const activities = ref([]);
+            const filterMonth = ref("");
+            const filterType = ref("all");
+            const showBackupModal = ref(false);
+
+            // 登入
+            const login = async () => {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                try {
+                    await auth.signInWithPopup(provider);
+                    // 登入後 onAuthStateChanged 會觸發
+                } catch (e) {
+                    console.error(e);
+                }
+            };
+
+            const logout = () => auth.signOut();
+
+            // 監聽 User 狀態並讀取資料
+            auth.onAuthStateChanged(async (u) => {
+                user.value = u;
+                if (u) {
+                    // 1. 檢查備份提醒
+                    checkBackupReminder(u);
+                    // 2. 讀取活動資料
+                    loadActivities(u.uid);
+                } else {
+                    activities.value = [];
+                }
+            });
+
+            // 檢查備份邏輯
+            const checkBackupReminder = async (u) => {
+                const docRef = db.collection('users').doc(u.uid);
+                const docSnap = await docRef.get();
+                const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+                
+                if (docSnap.exists) {
+                    const data = docSnap.data();
+                    if (data.lastBackupMonth !== currentMonth) {
+                        showBackupModal.value = true;
+                    }
+                } else {
+                    // 新用戶初始化
+                    await docRef.set({
+                        email: u.email,
+                        createdAt: new Date(),
+                        lastBackupMonth: null
+                    });
+                    // 新用戶也可能需要提醒備份? 視需求而定
+                }
+            };
+
+            const dismissBackup = async () => {
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                await db.collection('users').doc(user.value.uid).update({
+                    lastBackupMonth: currentMonth
+                });
+                showBackupModal.value = false;
+            };
+            
+            const exportData = () => {
+                alert("此處將觸發 CSV 下載邏輯 (整合 csv-utils.js)");
+                dismissBackup();
+            };
+
+            // 讀取活動
+            const loadActivities = async (uid) => {
+                const snap = await db.collection('users').doc(uid).collection('activities').orderBy('date', 'desc').get();
+                activities.value = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            };
+
+            // 匯入 CSV 處理
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const text = e.target.result;
+                    const newActivities = parseCSV(text); // 呼叫 csv-utils.js
+                    
+                    if (confirm(`解析出 ${newActivities.length} 筆資料，確定匯入？`)) {
+                        const batch = db.batch();
+                        const colRef = db.collection('users').doc(user.value.uid).collection('activities');
+                        
+                        newActivities.forEach(act => {
+                            const docRef = colRef.doc(); // Auto ID
+                            batch.set(docRef, act);
+                        });
+                        
+                        await batch.commit();
+                        alert("匯入成功！");
+                        loadActivities(user.value.uid); // 重整
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            // 篩選邏輯
+            const filteredActivities = computed(() => {
+                return activities.value.filter(act => {
+                    if (filterType.value !== 'all' && act.type !== filterType.value) return false;
+                    if (filterMonth.value && !act.date.startsWith(filterMonth.value)) return false;
+                    return true;
+                });
+            });
+
+            // 時間格式化輔助
+            const formatDuration = (sec) => {
+                if(!sec) return "--";
+                const h = Math.floor(sec / 3600);
+                const m = Math.floor((sec % 3600) / 60);
+                const s = sec % 60;
+                return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            };
+
+            return {
+                user, login, logout,
+                activities, filteredActivities,
+                filterMonth, filterType,
+                handleFileUpload,
+                showBackupModal, dismissBackup, exportData,
+                formatDuration
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
