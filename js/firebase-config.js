@@ -10,7 +10,8 @@ const firebaseConfig = {
   projectId: "runninglog-8da12",
   storageBucket: "runninglog-8da12.firebasestorage.app",
   messagingSenderId: "600035565062",
-  appId: "1:600035565062:web:5ae746eadd2b0c6d5c6d87"
+  appId: "1:600035565062:web:5ae746eadd2b0c6d5c6d87",
+  measurementId: "G-R1G6FXVSCV"
 };
 
 const app = initializeApp(firebaseConfig);
