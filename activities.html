@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Log - 活動日誌</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <nav class="navbar">
+            <div class="logo">Running Log</div>
+            <div class="nav-links">
+                <a href="activities.html" class="active">活動日誌</a>
+                <a href="nutrition.html">補給資料庫</a>
+                <a href="#" @click="logout">登出</a>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="stats-grid">
+                <div class="card stat-card">
+                    <h3>本月總跑量</h3>
+                    <div class="value">{{ monthlyStats.totalKm.toFixed(1) }} <span class="unit">km</span></div>
+                </div>
+                <div class="card stat-card">
+                    <h3>比賽</h3>
+                    <div class="value">{{ monthlyStats.raceCount }} <span class="unit">場</span></div>
+                </div>
+                <div class="card stat-card">
+                    <h3>訓練</h3>
+                    <div class="value">{{ monthlyStats.trainingCount }} <span class="unit">次</span></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="filters">
+                    <input type="month" v-model="filters.month">
+                    <select v-model="filters.type">
+                        <option value="all">全部類型</option>
+                        <option value="race">比賽 (Race)</option>
+                        <option value="training">訓練 (Training)</option>
+                    </select>
+                </div>
+                <div class="actions">
+                    <button @click="openModal('training')" class="btn secondary">新增訓練</button>
+                    <button @click="openModal('race')" class="btn primary">新增比賽</button>
+                    <button @click="exportCSV" class="btn outline">匯出 CSV</button>
+                    <label class="btn outline file-btn">
+                        匯入舊紀錄
+                        <input type="file" @change="importLegacyCSV" accept=".csv" hidden>
+                    </label>
+                </div>
+            </div>
+
+            <div class="activity-list">
+                <div v-for="act in filteredActivities" :key="act.id" class="card activity-card" :class="act.type">
+                    <div class="act-header">
+                        <span class="date">{{ act.date }}</span>
+                        <span class="badge" :class="act.type">
+                            {{ act.type === 'race' ? (act.raceNameZh || act.raceName) : act.workoutTitle }}
+                        </span>
+                        <div class="act-meta">
+                            <span v-if="act.distanceKm">{{ act.distanceKm }} km</span>
+                            <span v-if="act.officialTimeStr || act.durationSec">
+                                {{ act.officialTimeStr || formatDuration(act.durationSec) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="act-details">
+                        <p v-if="act.locationName">📍 {{ act.locationName }}</p>
+                        <p v-if="act.note" class="note">{{ act.note }}</p>
+                        <div v-if="act.type === 'training' && act.workoutCategories" class="tags">
+                            <span v-for="tag in act.workoutCategories" class="tag">{{ tag }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showModal" class="modal-overlay">
+            <div class="modal">
+                <h2>{{ isEdit ? '編輯' : '新增' }} {{ form.type === 'race' ? '比賽' : '訓練' }}</h2>
+                <form @submit.prevent="saveActivity">
+                    <div class="form-group">
+                        <label>日期</label>
+                        <input type="date" v-model="form.date" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>距離</label>
+                            <input type="number" step="0.01" v-model.number="form.distanceInputValue">
+                            <select v-model="form.distanceInputUnit">
+                                <option value="km">km</option>
+                                <option value="m">m</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>時間 (時:分:秒)</label>
+                            <div class="time-inputs">
+                                <input type="number" placeholder="HH" v-model.number="form.timeH">
+                                <input type="number" placeholder="MM" v-model.number="form.timeM">
+                                <input type="number" placeholder="SS" v-model.number="form.timeS">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="form.type === 'race'" class="race-fields">
+                        <div class="form-group">
+                            <label>賽事名稱 (中)</label>
+                            <input type="text" v-model="form.raceNameZh">
+                        </div>
+                        </div>
+
+                    <div v-if="form.type === 'training'" class="training-fields">
+                        <div class="form-group">
+                            <label>訓練標題</label>
+                            <input type="text" v-model="form.workoutTitle" placeholder="例如: Tempo 10K">
+                        </div>
+                        <div class="form-group">
+                            <label>訓練類型 (多選)</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" value="easyRun" v-model="form.workoutCategories"> Easy Run</label>
+                                <label><input type="checkbox" value="tempoRun" v-model="form.workoutCategories"> Tempo</label>
+                                <label><input type="checkbox" value="intervals" v-model="form.workoutCategories"> 間歇</label>
+                                <label><input type="checkbox" value="longRun" v-model="form.workoutCategories"> LSD</label>
+                                <label><input type="checkbox" value="strength" v-model="form.workoutCategories"> 肌力</label>
+                                <label><input type="checkbox" value="recovery" v-model="form.workoutCategories"> 恢復</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" @click="showModal = false" class="btn">取消</button>
+                        <button type="submit" class="btn primary">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div v-if="showBackupModal" class="modal-overlay">
+            <div class="modal">
+                <h3>🔔 每月備份提醒</h3>
+                <p>這是您本月第一次登入，建議備份資料。</p>
+                <div class="modal-actions">
+                    <button @click="skipBackup" class="btn">本月不再提醒</button>
+                    <button @click="performBackup" class="btn primary">下載備份 CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app-activities.js"></script>
+</body>
+</html>
