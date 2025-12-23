@@ -3,611 +3,553 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Endurance Log | 您的耐力數據中心</title>
+    <title>Endurance Log | 長跑訓練日誌</title>
     
-    <!-- 核心樣式與框架 -->
+    <!-- 核心樣式與圖標 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDK (Compat Version) -->
+    <!-- Firebase SDK (Compat 版本) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; }
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
+        /* 玻璃擬態效果 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
         
         /* 自定義捲軸 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        /* 背景動畫 */
-        .runner-bg {
-            background-image: url('https://images.unsplash.com/photo-1552674605-469555942da1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1951&q=80');
-            background-size: cover;
-            background-position: center;
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-        }
     </style>
 </head>
-<body class="bg-gray-50 text-slate-800 h-screen overflow-hidden">
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex flex-col">
 
 <div id="app" class="h-full flex flex-col">
-
-    <!-- Loading Overlay -->
-    <div v-if="loading" class="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-80">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-    </div>
-
-    <!-- ================= 1. 登入頁面 (Login View) ================= -->
-    <div v-if="!user" class="flex-1 flex flex-col md:flex-row h-full">
-        <!-- 左側：品牌形象 -->
-        <div class="md:w-1/2 lg:w-3/5 runner-bg relative flex items-center justify-center text-white p-12">
-            <div class="absolute inset-0 bg-blue-900 bg-opacity-60"></div>
-            <div class="relative z-10 max-w-lg">
-                <h1 class="text-5xl font-bold mb-6 tracking-tight">超越昨日的自己</h1>
-                <p class="text-xl opacity-90 mb-8 leading-relaxed">
-                    全方位的耐力運動數據庫。<br>
-                    紀錄比賽、規劃訓練、優化補給，一切盡在掌握。
-                </p>
-                <div class="flex gap-4 text-sm font-medium opacity-80">
-                    <span class="flex items-center"><i class="fas fa-check-circle mr-2"></i> 比賽日誌</span>
-                    <span class="flex items-center"><i class="fas fa-check-circle mr-2"></i> AI 補給管理</span>
-                    <span class="flex items-center"><i class="fas fa-check-circle mr-2"></i> 雲端備份</span>
-                </div>
+    
+    <!-- ========================================== -->
+    <!-- 1. 登入前首頁 (Landing Page) -->
+    <!-- ========================================== -->
+    <transition name="fade" mode="out-in">
+        <div v-if="!user" key="landing" class="h-full flex flex-col relative overflow-hidden">
+            <!-- 背景圖 -->
+            <div class="absolute inset-0 z-0">
+                <img src="https://images.unsplash.com/photo-1552674605-469523170d9e?q=80&w=2000&auto=format&fit=crop" 
+                     class="w-full h-full object-cover filter brightness-50" 
+                     alt="Runner Background">
             </div>
-        </div>
 
-        <!-- 右側：登入表單 -->
-        <div class="md:w-1/2 lg:w-2/5 flex items-center justify-center bg-white p-8">
-            <div class="w-full max-w-md">
-                <div class="mb-10 text-center">
-                    <i class="fas fa-running text-blue-600 text-4xl mb-4"></i>
-                    <h2 class="text-3xl font-bold text-gray-900">歡迎回來</h2>
-                    <p class="text-gray-500 mt-2">登入您的 Running Log 帳戶</p>
+            <!-- Navbar -->
+            <nav class="relative z-10 flex justify-between items-center p-6 container mx-auto text-white">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-person-running text-3xl text-yellow-400"></i>
+                    <span class="text-2xl font-bold tracking-wider">Endurance<span class="text-yellow-400">Log</span></span>
                 </div>
-
-                <button @click="login" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg transition shadow-sm mb-6">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
-                    使用 Google 帳號登入
-                </button>
-
-                <div class="text-center text-xs text-gray-400 mt-8">
-                    登入即代表您同意我們的隱私權政策與服務條款。<br>
-                    本系統僅使用 Firebase Auth 進行驗證，不追蹤額外數據。
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= 2. 主應用界面 (App View) ================= -->
-    <div v-else class="flex h-full bg-gray-100">
-        
-        <!-- 側邊選單 (Sidebar) -->
-        <aside class="w-64 bg-slate-900 text-slate-300 hidden md:flex flex-col shadow-xl z-20">
-            <div class="p-6 flex items-center gap-3 text-white border-b border-slate-800">
-                <i class="fas fa-running text-2xl text-blue-400"></i>
-                <span class="font-bold text-lg tracking-wide">Endurance Log</span>
-            </div>
-            
-            <nav class="flex-1 p-4 space-y-2">
-                <a href="#" @click.prevent="currentView = 'activities'" 
-                   :class="{'bg-blue-600 text-white shadow-lg': currentView === 'activities', 'hover:bg-slate-800': currentView !== 'activities'}"
-                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200">
-                    <i class="fas fa-list-ul w-5"></i>
-                    <span>活動日誌</span>
-                </a>
-                <a href="#" @click.prevent="currentView = 'nutrition'"
-                   :class="{'bg-blue-600 text-white shadow-lg': currentView === 'nutrition', 'hover:bg-slate-800': currentView !== 'nutrition'}"
-                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200">
-                    <i class="fas fa-capsules w-5"></i>
-                    <span>補給資料庫</span>
-                </a>
-                <!-- 未來擴充 -->
-                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 opacity-50 cursor-not-allowed">
-                    <i class="fas fa-chart-line w-5"></i>
-                    <span>數據統計 (Coming)</span>
-                </a>
+                <!-- 關於/說明按鈕 (可選) -->
             </nav>
 
-            <div class="p-4 border-t border-slate-800">
-                <div class="flex items-center gap-3 mb-4">
-                    <img :src="user.photoURL || 'https://via.placeholder.com/40'" class="w-10 h-10 rounded-full border-2 border-slate-600">
-                    <div class="overflow-hidden">
-                        <div class="text-sm font-medium text-white truncate">{{ user.displayName }}</div>
-                        <div class="text-xs text-slate-500 truncate">Free Plan</div>
-                    </div>
-                </div>
-                <button @click="logout" class="w-full text-left text-sm text-red-400 hover:text-red-300 transition flex items-center gap-2 px-2">
-                    <i class="fas fa-sign-out-alt"></i> 登出帳戶
-                </button>
-            </div>
-        </aside>
-
-        <!-- 主要內容區 -->
-        <main class="flex-1 flex flex-col overflow-hidden relative">
-            
-            <!-- 手機版頂部 Header -->
-            <header class="bg-white shadow-sm z-10 flex items-center justify-between p-4 md:hidden">
-                <span class="font-bold text-slate-800"><i class="fas fa-running text-blue-600 mr-2"></i>Endurance Log</span>
-                <button @click="logout" class="text-slate-500"><i class="fas fa-sign-out-alt"></i></button>
-            </header>
-            
-            <!-- 手機版下方選單 -->
-            <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-30 pb-safe">
-                <button @click="currentView = 'activities'" :class="currentView === 'activities' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center text-xs">
-                    <i class="fas fa-list-ul text-xl mb-1"></i>活動
-                </button>
-                <button @click="currentView = 'nutrition'" :class="currentView === 'nutrition' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center text-xs">
-                    <i class="fas fa-capsules text-xl mb-1"></i>補給
-                </button>
-            </div>
-
-            <!-- 內容捲動區 -->
-            <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8">
+            <!-- Hero Content -->
+            <main class="relative z-10 flex-1 flex flex-col justify-center items-center text-center px-4">
+                <h1 class="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
+                    記錄每一滴汗水<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400">超越昨天的自己</span>
+                </h1>
+                <p class="text-lg md:text-xl text-slate-200 mb-10 max-w-2xl font-light">
+                    專為長跑愛好者設計的訓練日誌。整合比賽紀錄、訓練組合、補給策略，並透過 AI 輕鬆管理營養資料庫。
+                </p>
                 
-                <!-- [VIEW 1] 活動日誌 (Activities) -->
-                <div v-if="currentView === 'activities'" class="max-w-5xl mx-auto">
+                <button @click="login" 
+                    class="group relative bg-white text-slate-900 px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-100 to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <span class="relative flex items-center gap-3">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6" alt="Google">
+                        使用 Google 帳號開始
+                    </span>
+                </button>
+            </main>
+
+            <footer class="relative z-10 p-6 text-center text-slate-400 text-sm">
+                &copy; 2025 Running Log Project. Designed for Runners.
+            </footer>
+        </div>
+
+    <!-- ========================================== -->
+    <!-- 2. 登入後儀表板 (Dashboard) -->
+    <!-- ========================================== -->
+        <div v-else key="dashboard" class="h-full flex flex-col bg-slate-50">
+            
+            <!-- Dashboard Header -->
+            <header class="bg-white shadow-sm z-20">
+                <div class="container mx-auto px-4 h-16 flex justify-between items-center">
+                    <div class="flex items-center gap-2 text-blue-900">
+                        <i class="fa-solid fa-person-running text-2xl"></i>
+                        <span class="text-xl font-bold hidden md:inline">EnduranceLog</span>
+                    </div>
+
+                    <!-- 頁籤切換 -->
+                    <div class="flex bg-slate-100 p-1 rounded-lg">
+                        <button @click="currentTab = 'activities'" 
+                            :class="['px-4 py-1.5 rounded-md text-sm font-medium transition-all', currentTab === 'activities' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700']">
+                            <i class="fa-solid fa-list-ul mr-1"></i> 活動日誌
+                        </button>
+                        <button @click="currentTab = 'nutrition'" 
+                            :class="['px-4 py-1.5 rounded-md text-sm font-medium transition-all', currentTab === 'nutrition' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700']">
+                            <i class="fa-solid fa-bolt mr-1"></i> 補給資料庫
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <div class="hidden md:flex flex-col items-end">
+                            <span class="text-sm font-bold text-slate-700">{{ user.displayName }}</span>
+                            <span class="text-xs text-slate-400">已登入</span>
+                        </div>
+                        <img :src="user.photoURL" class="w-9 h-9 rounded-full border border-slate-200" alt="Avatar">
+                        <button @click="logout" class="text-slate-400 hover:text-red-500 transition-colors" title="登出">
+                            <i class="fa-solid fa-arrow-right-from-bracket text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto p-4 md:p-6">
+                <div class="container mx-auto max-w-5xl">
                     
-                    <!-- Header Actions -->
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold text-slate-800">活動紀錄</h2>
-                            <p class="text-slate-500 text-sm">管理您的比賽與日常訓練</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <!-- 匯入舊資料 (隱藏 input，透過 label 觸發) -->
-                            <label class="cursor-pointer bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm shadow-sm transition flex items-center gap-2">
-                                <i class="fas fa-file-csv text-green-600"></i> 匯入舊 CSV
-                                <input type="file" @change="handleFileUpload" accept=".csv" class="hidden">
-                            </label>
-                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm transition flex items-center gap-2">
-                                <i class="fas fa-plus"></i> 新增紀錄
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 篩選器 -->
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center">
-                        <div class="flex items-center gap-2">
-                            <i class="fas fa-filter text-gray-400"></i>
-                            <span class="text-sm font-medium text-gray-600">篩選:</span>
-                        </div>
-                        <select v-model="filterMonth" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-                            <option value="">所有月份</option>
-                            <option value="2025-12">2025-12</option>
-                            <option value="2025-11">2025-11</option>
-                            <option value="2024-12">2024-12</option>
-                        </select>
-                        <select v-model="filterType" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-                            <option value="all">所有類型</option>
-                            <option value="race">🏆 比賽 (Race)</option>
-                            <option value="training">🏃 訓練 (Training)</option>
-                        </select>
-                    </div>
-
-                    <!-- 列表清單 -->
-                    <div v-if="filteredActivities.length === 0" class="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
-                        <i class="fas fa-wind text-4xl text-gray-300 mb-3"></i>
-                        <p class="text-gray-500">暫無資料，開始您的第一次跑步吧！</p>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div v-for="act in filteredActivities" :key="act.id" 
-                             class="group bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition hover:shadow-md hover:border-blue-200 relative overflow-hidden">
-                            <!-- 左側裝飾線 -->
-                            <div class="absolute left-0 top-0 bottom-0 w-1.5" :class="act.type === 'race' ? 'bg-amber-500' : 'bg-blue-500'"></div>
-                            
-                            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 pl-3">
-                                <div>
-                                    <div class="flex items-center gap-2 text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
-                                        {{ act.date }}
-                                        <span v-if="act.type === 'race'" class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px]">RACE</span>
-                                        <span v-else class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px]">TRAINING</span>
-                                    </div>
-                                    <h3 class="text-lg font-bold text-gray-800">
-                                        {{ act.type === 'race' ? (act.raceNameZh || act.raceName) : (act.workoutTitle || '一般訓練') }}
-                                    </h3>
-                                    <div class="text-sm text-gray-500 flex items-center gap-4 mt-1">
-                                        <span class="flex items-center gap-1"><i class="fas fa-map-marker-alt text-gray-400"></i> {{ act.locationName || '未知地點' }}</span>
-                                        <span v-if="act.note" class="flex items-center gap-1"><i class="fas fa-comment-alt text-gray-400"></i> {{ act.note }}</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-6 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
-                                    <div class="text-center">
-                                        <div class="text-xs text-gray-400 uppercase">距離</div>
-                                        <div class="text-xl font-bold text-gray-800 font-mono">{{ act.distanceKm }}<span class="text-sm font-normal text-gray-500">k</span></div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="text-xs text-gray-400 uppercase">時間</div>
-                                        <div class="text-xl font-bold text-gray-800 font-mono">{{ act.officialTimeStr || formatDuration(act.durationSec) }}</div>
-                                    </div>
-                                    <div class="text-center hidden sm:block">
-                                        <div class="text-xs text-gray-400 uppercase">配速</div>
-                                        <div class="text-lg font-medium text-gray-600 font-mono">{{ calculatePace(act.durationSec, act.distanceKm) }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- [VIEW 2] 補給資料庫 (Nutrition) -->
-                <div v-if="currentView === 'nutrition'" class="max-w-4xl mx-auto">
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-slate-800">補給品資料庫</h2>
-                        <p class="text-slate-500 text-sm">管理您的能量膠、飲料與補給策略</p>
-                    </div>
-
-                    <!-- AI Helper Block -->
-                    <div class="bg-gradient-to-br from-indigo-50 to-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-500 rounded-full opacity-10 blur-xl"></div>
+                    <!-- Tab 1: 活動管理 -->
+                    <div v-if="currentTab === 'activities'" class="space-y-6">
                         
-                        <div class="flex items-start gap-4">
-                            <div class="bg-white p-3 rounded-full shadow-sm text-indigo-600">
-                                <i class="fas fa-robot text-2xl"></i>
+                        <!-- 統計摘要卡片 -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded-xl shadow-lg">
+                                <div class="text-blue-100 text-xs uppercase font-semibold mb-1">本月跑量</div>
+                                <div class="text-2xl font-bold">{{ stats.monthDist.toFixed(1) }} <span class="text-sm font-normal">km</span></div>
                             </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-bold text-indigo-900 mb-2">AI 智能匯入助手</h3>
-                                <p class="text-sm text-indigo-700 mb-4 leading-relaxed">
-                                    懶得手動輸入營養標籤？讓 AI 幫你。<br>
-                                    1. 複製下方指令 <br>
-                                    2. 貼給 ChatGPT/Claude 並上傳補給品照片 <br>
-                                    3. 將 AI 回傳的 JSON 貼回來即可。
-                                </p>
-                                
-                                <div class="flex gap-3 flex-wrap">
-                                    <button @click="copyAiPrompt" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm">
-                                        <i class="far fa-copy"></i> 複製指令 (Prompt)
-                                    </button>
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                <div class="text-slate-400 text-xs uppercase font-semibold mb-1">訓練次數</div>
+                                <div class="text-2xl font-bold text-slate-700">{{ stats.count }} <span class="text-sm font-normal">次</span></div>
+                            </div>
+                             <!-- 功能按鈕區 -->
+                             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors" @click="triggerFileInput">
+                                <i class="fa-solid fa-file-csv text-green-500 text-xl"></i>
+                                <span class="text-xs font-bold text-slate-600">匯入舊 CSV</span>
+                                <input type="file" id="csvInput" class="hidden" @change="handleFileUpload" accept=".csv">
+                            </div>
+                             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors" @click="exportData">
+                                <i class="fa-solid fa-cloud-arrow-down text-blue-500 text-xl"></i>
+                                <span class="text-xs font-bold text-slate-600">備份資料</span>
+                            </div>
+                        </div>
+
+                        <!-- 篩選與列表 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                                <h3 class="font-bold text-lg text-slate-700">近期活動</h3>
+                                <div class="flex gap-2 w-full md:w-auto">
+                                    <select v-model="filterMonth" class="bg-slate-50 border border-slate-200 text-sm rounded-lg p-2 w-full md:w-auto focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">所有月份</option>
+                                        <option value="2025-12">2025-12</option>
+                                        <option value="2025-11">2025-11</option>
+                                        <!-- 在實際應用中應動態生成 -->
+                                    </select>
+                                    <select v-model="filterType" class="bg-slate-50 border border-slate-200 text-sm rounded-lg p-2 w-full md:w-auto focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="all">所有類型</option>
+                                        <option value="race">比賽 (Race)</option>
+                                        <option value="training">訓練 (Training)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 列表內容 -->
+                            <div class="divide-y divide-slate-100">
+                                <div v-if="filteredActivities.length === 0" class="p-8 text-center text-slate-400">
+                                    <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+                                    <p>尚無資料，請匯入或新增活動</p>
                                 </div>
 
-                                <div class="mt-4">
-                                    <textarea v-model="aiJsonInput" rows="3" class="w-full text-sm p-3 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent font-mono bg-white bg-opacity-50" placeholder='在此貼上 AI 回傳的 JSON，例如 [{"name":"GU Gel"...}]'></textarea>
-                                    <button @click="parseAndImportAI" class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm w-full md:w-auto transition">
-                                        <i class="fas fa-file-import mr-1"></i> 解析並匯入
-                                    </button>
+                                <div v-for="act in filteredActivities" :key="act.id" 
+                                     class="p-4 hover:bg-slate-50 transition-colors group">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <!-- Type Icon -->
+                                            <div :class="['w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm', 
+                                                act.type === 'race' ? 'bg-red-500' : 'bg-emerald-500']">
+                                                <i :class="['fa-solid', act.type === 'race' ? 'fa-trophy' : 'fa-stopwatch']"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800">
+                                                    {{ act.raceNameZh || act.workoutTitle || '未命名活動' }}
+                                                </h4>
+                                                <div class="text-xs text-slate-500 flex gap-2">
+                                                    <span><i class="fa-regular fa-calendar mr-1"></i>{{ act.date }}</span>
+                                                    <span v-if="act.locationName"><i class="fa-solid fa-location-dot mr-1"></i>{{ act.locationName }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-lg font-bold text-blue-600 font-mono">{{ act.distanceKm }} <span class="text-xs text-slate-400">km</span></div>
+                                            <div class="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                                {{ act.officialTimeStr || formatDuration(act.durationSec) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Notes Badge -->
+                                    <div v-if="act.note" class="ml-12 text-sm text-slate-500 bg-yellow-50 border border-yellow-100 p-2 rounded inline-block">
+                                        <i class="fa-regular fa-note-sticky text-yellow-500 mr-1"></i> {{ act.note }}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 補給品列表 (Placeholder) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div v-for="item in nutritionList" :key="item.id" class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded font-bold uppercase">{{ item.type }}</span>
-                                <span class="text-xs text-gray-400">{{ item.brand }}</span>
+                    <!-- Tab 2: 補給資料庫 (AI 功能) -->
+                    <div v-if="currentTab === 'nutrition'" class="space-y-6">
+                        
+                        <!-- AI 匯入區塊 (設計重點) -->
+                        <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-500 rounded-full opacity-10"></div>
+                            
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-bold">New</span>
+                                <h3 class="font-bold text-indigo-900 text-lg"><i class="fa-solid fa-robot mr-2"></i>AI 智慧匯入助手</h3>
                             </div>
-                            <h4 class="font-bold text-gray-800 mb-3">{{ item.name }}</h4>
-                            <div class="grid grid-cols-3 gap-2 text-center text-sm bg-gray-50 rounded-lg p-2">
+                            
+                            <div class="grid md:grid-cols-2 gap-6">
                                 <div>
-                                    <div class="text-gray-400 text-xs">Kcal</div>
-                                    <div class="font-bold text-gray-700">{{ item.energyKcal }}</div>
+                                    <p class="text-sm text-indigo-800 mb-4 leading-relaxed">
+                                        不想手動輸入營養標籤？請複製下方的指令，傳送給 ChatGPT / Claude，並附上補給品照片。將 AI 回傳的 JSON 貼入右側即可自動建檔。
+                                    </p>
+                                    <button @click="copyPrompt" class="bg-white border border-indigo-200 text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 transition-colors shadow-sm w-full md:w-auto text-center">
+                                        <i class="fa-regular fa-copy mr-2"></i>複製 AI Prompt 指令
+                                    </button>
                                 </div>
-                                <div>
-                                    <div class="text-gray-400 text-xs">Carb</div>
-                                    <div class="font-bold text-gray-700">{{ item.carbG }}g</div>
-                                </div>
-                                <div>
-                                    <div class="text-gray-400 text-xs">Na+</div>
-                                    <div class="font-bold text-gray-700">{{ item.sodiumMg }}</div>
+                                <div class="space-y-2">
+                                    <textarea v-model="aiJsonInput" rows="3" 
+                                        class="w-full p-3 border border-indigo-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                        placeholder='在此貼上 AI 回傳的 JSON，例如：[{"name":"GU Gel"...}]'></textarea>
+                                    <button @click="parseAndImportAI" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 w-full shadow-md transition-all">
+                                        <i class="fa-solid fa-file-import mr-2"></i>解析並匯入
+                                    </button>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 補給品列表 -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+                            <div class="p-4 border-b border-slate-100 font-bold text-slate-700">
+                                資料庫清單
+                            </div>
+                            <div class="divide-y divide-slate-100">
+                                <div v-if="nutritionList.length === 0" class="p-8 text-center text-slate-400">
+                                    <p>資料庫目前是空的，試試看 AI 匯入功能！</p>
+                                </div>
+                                <div v-for="item in nutritionList" :key="item.id" class="p-4 flex justify-between items-center hover:bg-slate-50">
+                                    <div>
+                                        <div class="font-bold text-slate-800">{{ item.name }}</div>
+                                        <div class="text-xs text-slate-500">{{ item.brand }} • {{ item.type }}</div>
+                                    </div>
+                                    <div class="flex gap-3 text-xs font-mono">
+                                        <div class="text-center px-2 py-1 bg-orange-50 text-orange-600 rounded">
+                                            <div class="font-bold">{{ item.energyKcal }}</div>
+                                            <div class="scale-75">kcal</div>
+                                        </div>
+                                        <div class="text-center px-2 py-1 bg-blue-50 text-blue-600 rounded">
+                                            <div class="font-bold">{{ item.sodiumMg }}</div>
+                                            <div class="scale-75">Na</div>
+                                        </div>
+                                        <div class="text-center px-2 py-1 bg-green-50 text-green-600 rounded">
+                                            <div class="font-bold">{{ item.carbG }}</div>
+                                            <div class="scale-75">Carb</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-
-            </div>
-        </main>
-    </div>
-
-    <!-- Modal: 備份提醒 -->
-    <transition name="fade">
-        <div v-if="showBackupModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
-            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center transform transition-all scale-100">
-                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                    <i class="fas fa-cloud-download-alt"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2">每月數據備份</h3>
-                <p class="text-gray-600 mb-6 text-sm">這是您本月第一次登入。為了確保數據安全，建議您下載訓練日誌的備份檔案。</p>
-                <div class="flex flex-col gap-3">
-                    <button @click="exportData" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition">
-                        立即下載備份 (CSV)
-                    </button>
-                    <button @click="dismissBackup" class="text-gray-400 hover:text-gray-600 py-2 text-sm">
-                        這個月不再提醒
-                    </button>
-                </div>
-            </div>
+            </main>
         </div>
     </transition>
+
+    <!-- Modal: 備份提醒 (Backup Reminder) -->
+    <div v-if="showBackupModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">每月備份提醒</h3>
+            <p class="text-slate-600 mb-6 text-sm">這是本月第一次登入。為了資料安全，建議您下載最新的訓練紀錄備份。</p>
+            <div class="flex flex-col gap-3">
+                <button @click="exportData" class="bg-blue-600 text-white py-2.5 rounded-xl font-medium hover:bg-blue-700 shadow-lg shadow-blue-200">
+                    立即下載 CSV
+                </button>
+                <button @click="dismissBackup" class="text-slate-400 py-2 text-sm hover:text-slate-600">
+                    本月不再提醒
+                </button>
+            </div>
+        </div>
+    </div>
 
 </div>
 
 <script>
-    // ================= CONFIGURATION =================
-    // 請在此處填入您的 Firebase Config
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
-    };
+/**
+ * ⚠️ 重要：請在此處填入您的 Firebase 設定
+ * 您可以從 Firebase Console > Project Settings > General > Your apps 取得
+ */
+const firebaseConfig = {
+    apiKey: "AIzaSy...", // 替換為您的 API Key
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef"
+};
 
-    // 初始化 Firebase
-    if (!firebase.apps.length) {
+// 初始化 Firebase (容錯處理，避免沒有填 Key 時報錯)
+let auth, db;
+try {
+    if (firebaseConfig.apiKey === "AIzaSy...") {
+        console.warn("⚠️ 請在 index.html 的 script 區塊中填入正確的 Firebase Config");
+    } else {
         firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
     }
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+} catch(e) { console.error(e); }
 
-    // ================= VUE APPLICATION =================
-    const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, onMounted, reactive } = Vue;
 
-    createApp({
-        setup() {
-            // State
-            const user = ref(null);
-            const loading = ref(true);
-            const currentView = ref('activities'); // 'activities' or 'nutrition'
-            const activities = ref([]);
-            const nutritionList = ref([]);
-            const showBackupModal = ref(false);
-            
-            // Filters
-            const filterMonth = ref("");
-            const filterType = ref("all");
-            
-            // AI Input
-            const aiJsonInput = ref("");
+createApp({
+    setup() {
+        const user = ref(null);
+        const currentTab = ref('activities'); // activities | nutrition
+        const activities = ref([]);
+        const nutritionList = ref([]); // 補給品列表
+        
+        // UI States
+        const filterMonth = ref("");
+        const filterType = ref("all");
+        const showBackupModal = ref(false);
+        const aiJsonInput = ref("");
 
-            // --- 1. Auth & Init ---
-            onMounted(() => {
-                auth.onAuthStateChanged(async (u) => {
-                    user.value = u;
-                    loading.value = false;
-                    if (u) {
-                        await checkBackupReminder(u);
-                        await loadActivities(u.uid);
-                        await loadNutrition(u.uid);
-                    } else {
-                        activities.value = [];
-                        nutritionList.value = [];
-                    }
-                });
-            });
+        // --- 登入/登出邏輯 ---
+        const login = async () => {
+            if (!auth) return alert("請先設定 Firebase Config");
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                await auth.signInWithPopup(provider);
+            } catch (e) {
+                console.error(e);
+                alert("登入失敗: " + e.message);
+            }
+        };
 
-            const login = async () => {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                try {
-                    await auth.signInWithPopup(provider);
-                } catch (e) {
-                    console.error("Login failed:", e);
-                    alert("登入失敗，請檢查 Console");
-                }
-            };
+        const logout = () => auth.signOut();
 
-            const logout = () => {
-                auth.signOut();
-                currentView.value = 'activities';
-            };
-
-            // --- 2. Data Loading ---
-            const loadActivities = async (uid) => {
-                const snap = await db.collection('users').doc(uid).collection('activities').orderBy('date', 'desc').get();
-                activities.value = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            };
-
-            const loadNutrition = async (uid) => {
-                const snap = await db.collection('users').doc(uid).collection('nutrition_db').orderBy('name').get();
-                nutritionList.value = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            };
-
-            // --- 3. Backup Logic ---
-            const checkBackupReminder = async (u) => {
-                const docRef = db.collection('users').doc(u.uid);
-                const docSnap = await docRef.get();
-                const currentMonth = new Date().toISOString().slice(0, 7);
-                
-                if (docSnap.exists) {
-                    const data = docSnap.data();
-                    if (data.lastBackupMonth !== currentMonth) {
-                        showBackupModal.value = true;
-                    }
+        // 監聽 User 狀態
+        if (auth) {
+            auth.onAuthStateChanged(async (u) => {
+                user.value = u;
+                if (u) {
+                    await checkBackupReminder(u);
+                    await loadActivities(u.uid);
+                    await loadNutrition(u.uid); // 載入補給品
                 } else {
-                    await docRef.set({
-                        email: u.email,
-                        displayName: u.displayName,
-                        createdAt: new Date(),
-                        lastBackupMonth: null,
-                        photoURL: u.photoURL
-                    }, { merge: true });
+                    activities.value = [];
+                    nutritionList.value = [];
                 }
-            };
-
-            const dismissBackup = async () => {
-                const currentMonth = new Date().toISOString().slice(0, 7);
-                await db.collection('users').doc(user.value.uid).update({
-                    lastBackupMonth: currentMonth
-                });
-                showBackupModal.value = false;
-            };
-
-            const exportData = () => {
-                // 這裡簡單模擬 CSV 下載
-                let csvContent = "data:text/csv;charset=utf-8,Date,Type,Name,Distance\n";
-                activities.value.forEach(row => {
-                    csvContent += `${row.date},${row.type},${row.raceNameZh || row.workoutTitle},${row.distanceKm}\n`;
-                });
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", `running_backup_${new Date().toISOString().slice(0,10)}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                dismissBackup();
-            };
-
-            // --- 4. CSV Import Logic (Legacy) ---
-            const handleFileUpload = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                loading.value = true;
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    try {
-                        const text = e.target.result;
-                        const newDocs = parseLegacyCSV(text);
-                        
-                        if (confirm(`解析出 ${newDocs.length} 筆資料，確定匯入？`)) {
-                            const batch = db.batch();
-                            const colRef = db.collection('users').doc(user.value.uid).collection('activities');
-                            newDocs.forEach(d => {
-                                const docRef = colRef.doc();
-                                batch.set(docRef, d);
-                            });
-                            await batch.commit();
-                            alert("匯入成功！");
-                            loadActivities(user.value.uid);
-                        }
-                    } catch(err) {
-                        alert("匯入錯誤：" + err.message);
-                    } finally {
-                        loading.value = false;
-                        event.target.value = ''; // Reset input
-                    }
-                };
-                reader.readAsText(file);
-            };
-
-            // CSV Parsing Helper (內嵌)
-            const parseLegacyCSV = (csvText) => {
-                const lines = csvText.trim().split('\n');
-                const headers = lines[0].split(',').map(h => h.trim());
-                const result = [];
-                for (let i = 1; i < lines.length; i++) {
-                    // 簡易 split (不處理引號內的逗號，若需嚴謹需用正規 regex)
-                    const row = lines[i].split(',');
-                    if (row.length < headers.length) continue;
-                    
-                    const obj = {};
-                    headers.forEach((h, idx) => obj[h] = row[idx] ? row[idx].trim() : '');
-                    
-                    // Convert
-                    const rawDist = obj['距離'] || "0";
-                    const distVal = parseFloat(rawDist.replace(/[^\d.]/g, ''));
-                    const timeStr = obj['完成時間'] || "0:00:00";
-                    
-                    // Time to Sec
-                    const parts = timeStr.split(':').map(Number);
-                    let sec = 0;
-                    if(parts.length===3) sec = parts[0]*3600 + parts[1]*60 + parts[2];
-                    else if(parts.length===2) sec = parts[0]*60 + parts[1];
-
-                    result.push({
-                        type: 'race',
-                        date: obj['比賽日期'] || new Date().toISOString().slice(0,10),
-                        distanceKm: distVal,
-                        durationSec: sec,
-                        locationName: obj['地點'] || '',
-                        note: obj['備註'] || '',
-                        raceName: obj['Race Name'] || '',
-                        raceNameZh: obj['比賽名稱'] || '',
-                        officialTimeStr: timeStr,
-                        createdAt: new Date()
-                    });
-                }
-                return result;
-            };
-
-            // --- 5. AI Nutrition Logic ---
-            const copyAiPrompt = () => {
-                const promptText = `# Role\n你是一個專業的馬拉松補給品資料輸入助理。...\n(請參考 prompt.txt)\n# Example Output\n[{"name":"Gel","brand":"GU","type":"gel","energyKcal":100,"sodiumMg":60,"carbG":22,"note":""}]`; 
-                // 為了簡潔，這裡省略完整 Prompt，實際使用請填入完整文字
-                navigator.clipboard.writeText(promptText).then(() => alert("指令已複製！"));
-            };
-
-            const parseAndImportAI = async () => {
-                if (!aiJsonInput.value) return;
-                try {
-                    loading.value = true;
-                    let cleanStr = aiJsonInput.value.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
-                    const items = JSON.parse(cleanStr);
-                    if (!Array.isArray(items)) throw new Error("非 JSON Array");
-
-                    const batch = db.batch();
-                    const colRef = db.collection('users').doc(user.value.uid).collection('nutrition_db');
-                    
-                    items.forEach(item => {
-                        if(!item.name) return;
-                        const docRef = colRef.doc();
-                        batch.set(docRef, { ...item, createdAt: new Date() });
-                    });
-                    
-                    await batch.commit();
-                    alert(`成功匯入 ${items.length} 筆！`);
-                    aiJsonInput.value = "";
-                    loadNutrition(user.value.uid);
-                } catch(e) {
-                    alert("解析失敗：" + e.message);
-                } finally {
-                    loading.value = false;
-                }
-            };
-
-            // --- 6. Helpers ---
-            const formatDuration = (sec) => {
-                if (!sec) return "--";
-                const h = Math.floor(sec / 3600);
-                const m = Math.floor((sec % 3600) / 60);
-                const s = sec % 60;
-                return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-            };
-
-            const calculatePace = (sec, km) => {
-                if (!sec || !km) return "--";
-                const paceSec = sec / km;
-                const m = Math.floor(paceSec / 60);
-                const s = Math.floor(paceSec % 60);
-                return `${m}'${s.toString().padStart(2,'0')}"/km`;
-            };
-
-            const filteredActivities = computed(() => {
-                return activities.value.filter(act => {
-                    if (filterType.value !== 'all' && act.type !== filterType.value) return false;
-                    if (filterMonth.value && !act.date.startsWith(filterMonth.value)) return false;
-                    return true;
-                });
             });
-
-            return {
-                user, loading, login, logout,
-                currentView,
-                activities, nutritionList, filteredActivities,
-                filterMonth, filterType,
-                handleFileUpload,
-                showBackupModal, dismissBackup, exportData,
-                aiJsonInput, copyAiPrompt, parseAndImportAI,
-                formatDuration, calculatePace
-            };
         }
-    }).mount('#app');
+
+        // --- 資料讀取 ---
+        const loadActivities = async (uid) => {
+            const snap = await db.collection('users').doc(uid).collection('activities').orderBy('date', 'desc').limit(50).get();
+            activities.value = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        };
+
+        const loadNutrition = async (uid) => {
+             const snap = await db.collection('users').doc(uid).collection('nutrition_db').orderBy('createdAt', 'desc').get();
+             nutritionList.value = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+
+        // --- CSV 匯入邏輯 (含舊資料轉換) ---
+        const triggerFileInput = () => document.getElementById('csvInput').click();
+
+        const handleFileUpload = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const text = e.target.result;
+                const newActs = parseLegacyCSV(text);
+                if (confirm(`解析出 ${newActs.length} 筆資料，確定匯入？`)) {
+                    const batch = db.batch();
+                    const colRef = db.collection('users').doc(user.value.uid).collection('activities');
+                    newActs.forEach(act => batch.set(colRef.doc(), act));
+                    await batch.commit();
+                    alert("匯入成功！");
+                    loadActivities(user.value.uid);
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        // 舊 CSV 解析器 (內嵌版)
+        const parseLegacyCSV = (csvText) => {
+            const lines = csvText.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                // 簡單處理 CSV (建議用 PapaParse 處理複雜引號，此處為簡易版)
+                const rowData = lines[i].split(','); 
+                if (rowData.length < headers.length) continue;
+                const obj = {};
+                headers.forEach((h, idx) => obj[h] = rowData[idx] ? rowData[idx].trim() : '');
+                
+                // 轉換邏輯
+                const distVal = parseFloat((obj['距離']||"0").replace(/[^\d.]/g, ''));
+                const timeParts = (obj['完成時間']||"0:00:00").split(':').map(Number);
+                const durSec = timeParts.length === 3 ? timeParts[0]*3600+timeParts[1]*60+timeParts[2] : 0;
+                
+                result.push({
+                    type: 'race',
+                    date: obj['比賽日期'] || new Date().toISOString().split('T')[0],
+                    distanceKm: distVal,
+                    distanceInputValue: distVal,
+                    distanceInputUnit: 'km',
+                    durationSec: durSec,
+                    locationName: obj['地點'] || '',
+                    note: obj['備註'] || '',
+                    raceName: obj['Race Name'] || '',
+                    raceNameZh: obj['比賽名稱'] || '',
+                    officialTimeStr: obj['完成時間'] || '',
+                    createdAt: new Date()
+                });
+            }
+            return result;
+        };
+
+        // --- 備份功能 ---
+        const checkBackupReminder = async (u) => {
+            const docRef = db.collection('users').doc(u.uid);
+            const docSnap = await docRef.get();
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            if (!docSnap.exists || docSnap.data().lastBackupMonth !== currentMonth) {
+                showBackupModal.value = true;
+                if (!docSnap.exists) await docRef.set({ email: u.email, createdAt: new Date() });
+            }
+        };
+
+        const dismissBackup = async () => {
+            await db.collection('users').doc(user.value.uid).update({ lastBackupMonth: new Date().toISOString().slice(0, 7) });
+            showBackupModal.value = false;
+        };
+
+        const exportData = () => {
+            // 簡易 CSV 匯出實作
+            const headers = ['date', 'type', 'distanceKm', 'durationSec', 'note'];
+            const csvContent = [
+                headers.join(','),
+                ...activities.value.map(row => headers.map(fieldName => row[fieldName] || '').join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `backup_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            dismissBackup();
+        };
+
+        // --- AI Nutrition 助手 ---
+        const copyPrompt = () => {
+            const prompt = `# Role
+你是一個專業的馬拉松補給品資料輸入助理。請將補給品資訊轉換為純 JSON Array。
+# Data Structure
+- name (string)
+- brand (string)
+- type (string): "gel"|"drink"|"bar"|"other"
+- energyKcal (number)
+- sodiumMg (number)
+- carbG (number)
+- note (string)
+# Constraints
+Output only pure JSON array. No markdown. Unknown values use 0.`;
+            navigator.clipboard.writeText(prompt).then(() => alert("Prompt 已複製！請貼給 AI。"));
+        };
+
+        const parseAndImportAI = async () => {
+            if (!aiJsonInput.value) return;
+            try {
+                let cleanStr = aiJsonInput.value.trim()
+                    .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
+                const items = JSON.parse(cleanStr);
+                
+                const batch = db.batch();
+                const colRef = db.collection('users').doc(user.value.uid).collection('nutrition_db');
+                items.forEach(item => {
+                    batch.set(colRef.doc(), { ...item, createdAt: new Date() });
+                });
+                await batch.commit();
+                alert(`成功匯入 ${items.length} 筆資料！`);
+                aiJsonInput.value = "";
+                loadNutrition(user.value.uid);
+            } catch (e) {
+                alert("解析失敗: " + e.message);
+            }
+        };
+
+        // --- Computed & Helpers ---
+        const filteredActivities = computed(() => {
+            return activities.value.filter(act => {
+                if (filterType.value !== 'all' && act.type !== filterType.value) return false;
+                if (filterMonth.value && !act.date.startsWith(filterMonth.value)) return false;
+                return true;
+            });
+        });
+
+        const stats = computed(() => {
+            const now = new Date();
+            const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
+            // 簡易計算：只算本月的
+            const thisMonthActs = activities.value.filter(a => a.date.startsWith(currentMonthStr));
+            const totalDist = thisMonthActs.reduce((sum, act) => sum + (parseFloat(act.distanceKm) || 0), 0);
+            return { monthDist: totalDist, count: thisMonthActs.length };
+        });
+
+        const formatDuration = (sec) => {
+            if (!sec) return "--";
+            const h = Math.floor(sec / 3600);
+            const m = Math.floor((sec % 3600) / 60);
+            const s = Math.floor(sec % 60); // 確保是整數
+            return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        };
+
+        return {
+            user, login, logout,
+            currentTab, activities, nutritionList,
+            filterMonth, filterType, showBackupModal, aiJsonInput,
+            stats, filteredActivities,
+            triggerFileInput, handleFileUpload, exportData, dismissBackup,
+            copyPrompt, parseAndImportAI, formatDuration
+        };
+    }
+}).mount('#app');
 </script>
 </body>
 </html>
