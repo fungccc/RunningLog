@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Running Log - 補給資料庫</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <nav class="navbar">
+            <div class="logo">Running Log</div>
+            <div class="nav-links">
+                <a href="activities.html">活動日誌</a>
+                <a href="nutrition.html" class="active">補給資料庫</a>
+                <a href="#" @click="logout">登出</a>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="ai-helper-zone">
+                <h3>🤖 AI 補給品解析助手</h3>
+                <p>將補給品官網資料貼給 ChatGPT/Gemini，使用下方指令，再將回傳的 JSON 貼回這裡。</p>
+                
+                <div class="prompt-box">
+                    <code>
+                        請幫我解析以下補給品資訊，並回傳純 JSON Array 格式。欄位包含: name, brand, type (gel/drink/bar/other), energyKcal (number), sodiumMg (number), carbG (number), note。不要 Markdown，只要純文字 JSON。
+                    </code>
+                    <button @click="copyPrompt" class="btn sm">複製指令</button>
+                </div>
+
+                <textarea v-model="aiJsonInput" placeholder="在此貼上 AI 回傳的 JSON..."></textarea>
+                <button @click="importAiJson" class="btn primary">解析並匯入</button>
+            </div>
+
+            <div class="nutrition-grid">
+                <div v-for="item in items" :key="item.id" class="card nutrition-card">
+                    <div class="nut-header">
+                        <strong>{{ item.name }}</strong>
+                        <span class="brand">{{ item.brand }}</span>
+                    </div>
+                    <div class="nut-stats">
+                        <span>⚡ {{ item.energyKcal }} kcal</span>
+                        <span>🧂 {{ item.sodiumMg }} mg</span>
+                        <span>🍞 {{ item.carbG }} g</span>
+                    </div>
+                    <div class="type-tag">{{ item.type }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="js/app-nutrition.js"></script>
+</body>
+</html>
