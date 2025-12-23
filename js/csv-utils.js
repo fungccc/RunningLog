@@ -96,8 +96,34 @@ export function convertGarminActivityRow(row) {
     const type = typeMap[rawType] || 'training';
 
     // 日期處理 "2025-12-21 07:46:20" -> "2025-12-21"
+    // js/csv-utils.js
+
+// ... (前略)
+
+// 修正後的 convertGarminActivityRow
+export function convertGarminActivityRow(row) {
+    // ... (前略 map 定義)
+
+    const rawType = row['活動類型'] || row['Activity Type'] || 'Running';
+    const type = typeMap[rawType] || 'training';
+
+    // === 修改開始: iPhone Safari 安全的日期處理 ===
+    let date = new Date().toISOString().split('T')[0]; // 預設今天
     const rawDate = row['日期'] || row['Date'];
-    const date = rawDate ? rawDate.split(' ')[0] : new Date().toISOString().split('T')[0];
+    
+    if (rawDate) {
+        // 將 "2025-12-21 07:46:20" 轉為 "2025-12-21T07:46:20" (ISO格式)
+        // 或是直接取前 10 碼
+        if(rawDate.includes('T')) {
+            date = rawDate.split('T')[0];
+        } else {
+            // 處理中間是空白的情況
+            date = rawDate.replace(/\//g, '-').split(' ')[0];
+        }
+    }
+    // === 修改結束 ===
+
+    // ... (後續程式碼保持不變)
 
     // 距離與時間
     const distRaw = row['距離'] || row['Distance'] || "0";
