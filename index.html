@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Log - 長跑生涯紀錄</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="landing-page">
+    <div class="overlay">
+        <div class="landing-content">
+            <h1 class="gradient-text">Running Log</h1>
+            <p class="subtitle">紀錄你的每一次起跑，數據化你的長跑生涯</p>
+            <p class="features">比賽紀錄 • 訓練分析 • 補給資料庫</p>
+            
+            <button id="loginBtn" class="google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                使用 Google 登入
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, provider, signInWithPopup, onAuthStateChanged } from './js/firebase-config.js';
+
+        // 檢查登入狀態
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = 'activities.html';
+            }
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch((error) => {
+                alert("登入失敗: " + error.message);
+            });
+        });
+    </script>
+</body>
+</html>
