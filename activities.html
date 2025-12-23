@@ -1,3 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Log - 活動日誌</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+<script>
+  // 初始化手機版 Debug Console
+  var vConsole = new VConsole();
+</script>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <nav class="navbar">
+            <div class="logo">Running Log</div>
+            <div class="nav-links">
+                <a href="activities.html" class="active">活動日誌</a>
+                <a href="nutrition.html">補給資料庫</a>
+                <a href="#" @click="logout">登出</a>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="stats-grid">
+                <div class="card stat-card">
+                    <h3>本月總跑量</h3>
+                    <div class="value">{{ monthlyStats.totalKm.toFixed(1) }} <span class="unit">km</span></div>
+                </div>
+                <div class="card stat-card">
+                    <h3>比賽</h3>
+                    <div class="value">{{ monthlyStats.raceCount }} <span class="unit">場</span></div>
+                </div>
+                <div class="card stat-card">
+                    <h3>訓練</h3>
+                    <div class="value">{{ monthlyStats.trainingCount }} <span class="unit">次</span></div>
+                </div>
+            </div>
+
 <div class="controls">
     <div class="filters">
         <input type="month" v-model="filters.month">
@@ -45,3 +87,81 @@
         </div>
     </div>
 </div>
+
+
+        <div v-if="showModal" class="modal-overlay">
+            <div class="modal">
+                <h2>{{ isEdit ? '編輯' : '新增' }} {{ form.type === 'race' ? '比賽' : '訓練' }}</h2>
+                <form @submit.prevent="saveActivity">
+                    <div class="form-group">
+                        <label>日期</label>
+                        <input type="date" v-model="form.date" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>距離</label>
+                            <input type="number" step="0.01" v-model.number="form.distanceInputValue">
+                            <select v-model="form.distanceInputUnit">
+                                <option value="km">km</option>
+                                <option value="m">m</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>時間 (時:分:秒)</label>
+                            <div class="time-inputs">
+                                <input type="number" placeholder="HH" v-model.number="form.timeH">
+                                <input type="number" placeholder="MM" v-model.number="form.timeM">
+                                <input type="number" placeholder="SS" v-model.number="form.timeS">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="form.type === 'race'" class="race-fields">
+                        <div class="form-group">
+                            <label>賽事名稱 (中)</label>
+                            <input type="text" v-model="form.raceNameZh">
+                        </div>
+                        </div>
+
+                    <div v-if="form.type === 'training'" class="training-fields">
+                        <div class="form-group">
+                            <label>訓練標題</label>
+                            <input type="text" v-model="form.workoutTitle" placeholder="例如: Tempo 10K">
+                        </div>
+                        <div class="form-group">
+                            <label>訓練類型 (多選)</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" value="easyRun" v-model="form.workoutCategories"> Easy Run</label>
+                                <label><input type="checkbox" value="tempoRun" v-model="form.workoutCategories"> Tempo</label>
+                                <label><input type="checkbox" value="intervals" v-model="form.workoutCategories"> 間歇</label>
+                                <label><input type="checkbox" value="longRun" v-model="form.workoutCategories"> LSD</label>
+                                <label><input type="checkbox" value="strength" v-model="form.workoutCategories"> 肌力</label>
+                                <label><input type="checkbox" value="recovery" v-model="form.workoutCategories"> 恢復</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" @click="showModal = false" class="btn">取消</button>
+                        <button type="submit" class="btn primary">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div v-if="showBackupModal" class="modal-overlay">
+            <div class="modal">
+                <h3>🔔 每月備份提醒</h3>
+                <p>這是您本月第一次登入，建議備份資料。</p>
+                <div class="modal-actions">
+                    <button @click="skipBackup" class="btn">本月不再提醒</button>
+                    <button @click="performBackup" class="btn primary">下載備份 CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app-activities.js"></script>
+</body>
+</html>
