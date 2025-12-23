@@ -5,12 +5,12 @@ import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, a
 
 // 請替換成你的 Firebase Config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCw7o8V-QW5M9Px7lcx4hOCAxW7oNKLhak",
+  authDomain: "runninglog-8da12.firebaseapp.com",
+  projectId: "runninglog-8da12",
+  storageBucket: "runninglog-8da12.firebasestorage.app",
+  messagingSenderId: "600035565062",
+  appId: "1:600035565062:web:5ae746eadd2b0c6d5c6d87"
 };
 
 const app = initializeApp(firebaseConfig);
